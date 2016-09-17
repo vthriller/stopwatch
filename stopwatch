@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+from time import monotonic
+from sys import stdin
+from select import select
+import os
+import termios
+from copy import deepcopy
+
+# make stdin unbuffered
+stdin = os.fdopen(stdin.fileno(), 'rb', 0)
+
+flags = termios.tcgetattr(stdin.fileno())
+rflags = deepcopy(flags) # to restore them lately
+# > In noncanonical mode input is available immediately
+# c_lflag
+flags[3] &= ~(termios.ICANON | termios.ECHO | termios.ECHOE | termios.ECHOK | termios.ECHONL)
+termios.tcsetattr(stdin.fileno(), termios.TCSANOW, flags)
+EOF = flags[6][termios.VEOF] # cc_t[VEOF]
+
+t = monotonic()
+while 1:
+	ready, _, _ = select([stdin], [], [], 1)
+	if ready:
+		c = stdin.read(1)
+		print('%.2f %s' % (
+			monotonic() - t,
+			c.decode('ASCII') if c != EOF else 'EOF'
+		))
+		#if not c: break # EOF in canonical mode is represented with an empty string
+		if c == EOF: break
+
+termios.tcsetattr(stdin.fileno(), termios.TCSANOW, rflags)
