@@ -14,19 +14,20 @@ rflags = deepcopy(flags) # to restore them lately
 # > In noncanonical mode input is available immediately
 # c_lflag
 flags[3] &= ~(termios.ICANON | termios.ECHO | termios.ECHOE | termios.ECHOK | termios.ECHONL)
-termios.tcsetattr(stdin.fileno(), termios.TCSANOW, flags)
 EOF = flags[6][termios.VEOF] # cc_t[VEOF]
 
-t = monotonic()
-while 1:
-	ready, _, _ = select([stdin], [], [], 1)
-	if ready:
-		c = stdin.read(1)
-		print('%.2f %s' % (
-			monotonic() - t,
-			c.decode('ASCII') if c != EOF else 'EOF'
-		))
-		#if not c: break # EOF in canonical mode is represented with an empty string
-		if c == EOF: break
+try:
+	termios.tcsetattr(stdin.fileno(), termios.TCSANOW, flags)
 
-termios.tcsetattr(stdin.fileno(), termios.TCSANOW, rflags)
+	t = monotonic()
+	while 1:
+		ready, _, _ = select([stdin], [], [], 1)
+		if ready:
+			c = stdin.read(1)
+			print('%.2f %s' % (
+				monotonic() - t,
+				c.decode('ASCII') if c != EOF else 'EOF'
+			))
+			if c == EOF: break
+finally:
+	termios.tcsetattr(stdin.fileno(), termios.TCSANOW, rflags)
