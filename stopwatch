@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 from time import monotonic
-from sys import stdin
+from sys import stdin, argv
 from select import select
 import os
 import termios
 from copy import deepcopy
+
+show_elapsed = '-q' not in argv
 
 # make stdin unbuffered
 stdin = os.fdopen(stdin.fileno(), 'rb', 0)
@@ -21,7 +23,7 @@ try:
 
 	t = monotonic()
 	while 1:
-		ready, _, _ = select([stdin], [], [], 1)
+		ready, _, _ = select([stdin], [], [], 1 if show_elapsed else None)
 		if ready:
 			c = stdin.read(1)
 			print('%.2f %s' % (
@@ -29,5 +31,7 @@ try:
 				c.decode('ASCII') if c != EOF else 'EOF'
 			))
 			if c == EOF: break
+		else:
+			print('%.2f' % (monotonic() - t), end='\r')
 finally:
 	termios.tcsetattr(stdin.fileno(), termios.TCSANOW, rflags)
